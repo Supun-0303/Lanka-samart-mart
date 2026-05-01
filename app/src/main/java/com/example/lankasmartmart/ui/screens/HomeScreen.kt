@@ -1,0 +1,564 @@
+package com.example.lankasmartmart.ui.screens
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import coil.compose.AsyncImage
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.lankasmartmart.R
+import com.example.lankasmartmart.viewmodel.ShopViewModel
+import com.example.lankasmartmart.model.Product
+import kotlinx.coroutines.delay
+
+// Data Models
+data class PromoBannerItem(
+    val title: String,
+    val subtitle: String,
+    val buttonText: String,
+    val backgroundColor: Color,
+    val buttonColor: Color,
+    val icon: ImageVector
+)
+
+data class CategorySection(
+    val title: String,
+    val products: List<Product>
+)
+
+data class BottomNavItem(
+    val label: String,
+    val icon: ImageVector,
+    val isSelected: Boolean = false
+)
+
+// Colors
+private val BackgroundWhite = Color(0xFFFFFFFF)
+private val PrimaryBlue = Color(0xFF5B7FFA)
+private val PrimaryGreen = Color(0xFF4CAF50)
+private val OrangeAccent = Color(0xFFFF9800)
+private val StarYellow = Color(0xFFFFC107)
+private val TextGray = Color(0xFF6B7280)
+private val CardGrey = Color(0xFFF5F5F5)
+private val BannerBlue = Color(0xFFD6E4FF)
+
+@Composable
+fun HomeScreen(
+    modifier: Modifier = Modifier,
+    shopViewModel: ShopViewModel? = null,
+    onCategoryClick: (String) -> Unit = {},
+    onSearchClick: () -> Unit = {},
+    onCartClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
+    onProductClick: (Product) -> Unit = {},
+    onAddToCart: (Product) -> Unit = {},
+    onSeeAllClick: (String) -> Unit = {},
+    onShopNowClick: () -> Unit = {},
+    onBottomNavClick: (String) -> Unit = {}
+) {
+    // Promotional banners state from ViewModel
+    val promotions by shopViewModel?.promotions?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
+    val products by shopViewModel?.products?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
+
+    // Dynamic product categories logic
+    val categories = remember(products) {
+        val grouped = products.groupBy { it.category }
+        listOfNotNull(
+            grouped["groceries"]?.let { CategorySection("Groceries", it.take(6)) },
+            grouped["fruits"]?.let { CategorySection("Fruits", it.take(6)) },
+            grouped["snacks"]?.let { CategorySection("Snacks", it.take(6)) },
+            grouped["dairy"]?.let { CategorySection("Dairy", it.take(6)) }
+        ).filter { it.products.isNotEmpty() }
+    }
+
+    Scaffold(
+        bottomBar = {
+            BottomNavBar(
+                items = listOf(
+                    BottomNavItem("Shop", Icons.Outlined.Store, true),
+                    BottomNavItem("Explore", Icons.Outlined.Search, false),
+                    BottomNavItem("Cart", Icons.Outlined.ShoppingCart, false),
+                    BottomNavItem("Favourite", Icons.Outlined.FavoriteBorder, false),
+                    BottomNavItem("Account", Icons.Outlined.Person, false)
+                ),
+                onItemClick = { label ->
+                    when (label) {
+                        "Explore" -> onSearchClick()
+                        "Cart" -> onCartClick()
+                        "Account" -> onProfileClick()
+                        "Favourite" -> {}
+                    }
+                    onBottomNavClick(label)
+                }
+            )
+        },
+        containerColor = BackgroundWhite
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Centered Logo Header
+            item {
+                CenteredLogoHeader()
+            }
+
+            // Auto-changing Promotional Banner
+            if (promotions.isNotEmpty()) {
+                item {
+                    AutoChangingPromoBanner(
+                        banners = promotions,
+                        onPromoClick = { promo ->
+                            when (promo.actionType) {
+                                "category" -> onCategoryClick(promo.actionId)
+                                "product" -> {
+                                    // Handle product click if needed
+                                }
+                                else -> onShopNowClick()
+                            }
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            }
+
+            // Category Sections
+            items(categories) { category ->
+                Column {
+                    SectionHeader(
+                        title = category.title,
+                        onSeeAllClick = { onSeeAllClick(category.title) },
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp)
+                    ) {
+                        items(category.products) { product ->
+                            ProductCard(
+                                product = product,
+                                onClick = { onProductClick(product) },
+                                onAddClick = { onAddToCart(product) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun CenteredLogoHeader(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Logo
+        Image(
+            painter = painterResource(id = R.drawable.logo),
+            contentDescription = "Lanka SmartMart Logo",
+            modifier = Modifier.size(80.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Brand Name
+        Text(
+            text = buildAnnotatedString {
+                withStyle(
+                    style = SpanStyle(
+                        color = PrimaryGreen,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                ) {
+                    append("Lanka ")
+                }
+                withStyle(
+                    style = SpanStyle(
+                        color = OrangeAccent,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                ) {
+                    append("Smart")
+                }
+                withStyle(
+                    style = SpanStyle(
+                        color = OrangeAccent,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                ) {
+                    append("Mart")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun AutoChangingPromoBanner(
+    banners: List<com.example.lankasmartmart.model.Promotion>,
+    modifier: Modifier = Modifier,
+    onPromoClick: (com.example.lankasmartmart.model.Promotion) -> Unit = {}
+) {
+    val pagerState = rememberPagerState(pageCount = { banners.size })
+
+    // Auto-scroll effect
+    LaunchedEffect(banners) {
+        if (banners.isNotEmpty()) {
+            while (true) {
+                delay(4000) // Change banner every 4 seconds
+                val nextPage = (pagerState.currentPage + 1) % banners.size
+                pagerState.animateScrollToPage(nextPage)
+            }
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth()
+        ) { page ->
+            PromotionBannerCard(
+                promotion = banners[page],
+                onPromoClick = { onPromoClick(banners[page]) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Page indicators
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(banners.size) { index ->
+                Box(
+                    modifier = Modifier
+                        .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (index == pagerState.currentPage) PrimaryBlue
+                            else Color.LightGray
+                        )
+                )
+                if (index < banners.size - 1) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PromotionBannerCard(
+    promotion: com.example.lankasmartmart.model.Promotion,
+    modifier: Modifier = Modifier,
+    onPromoClick: () -> Unit = {}
+) {
+    val backgroundColor = remember(promotion.backgroundColor) {
+        try {
+            Color(android.graphics.Color.parseColor(promotion.backgroundColor))
+        } catch (e: Exception) {
+            PrimaryGreen
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(160.dp)
+            .clickable { onPromoClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = backgroundColor
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left content
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = promotion.title,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    lineHeight = 28.sp
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = promotion.subtitle,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.Normal
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Surface(
+                    onClick = onPromoClick,
+                    color = Color.White,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Shop Now",
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = backgroundColor
+                    )
+                }
+            }
+
+            // Right icon/image decoration
+            Icon(
+                imageVector = Icons.Default.LocalOffer,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = Color.White.copy(alpha = 0.15f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    onSeeAllClick: () -> Unit = {}
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+
+        Text(
+            text = "See all",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = PrimaryBlue,
+            modifier = Modifier.clickable { onSeeAllClick() }
+        )
+    }
+}
+
+@Composable
+fun ProductCard(
+    product: Product,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+    onAddClick: () -> Unit = {}
+) {
+    Card(
+        modifier = modifier
+            .width(160.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = CardGrey
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            // Product image with add button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+            ) {
+                // Product image
+                AsyncImage(
+                    model = product.imageUrl,
+                    contentDescription = product.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+
+                // Add button
+                IconButton(
+                    onClick = onAddClick,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(32.dp)
+                        .background(Color.White, CircleShape)
+                        .shadow(2.dp, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add to cart",
+                        tint = Color.Black,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Product name
+            Text(
+                text = product.name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                maxLines = 1
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Rating
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Rating",
+                    tint = StarYellow,
+                    modifier = Modifier.size(16.dp)
+                )
+
+                Text(
+                    text = "${product.rating} (${product.reviewCount})",
+                    fontSize = 12.sp,
+                    color = TextGray
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Price
+            Text(
+                text = "LKR ${product.price}",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+    }
+}
+
+@Composable
+fun BottomNavBar(
+    items: List<BottomNavItem>,
+    modifier: Modifier = Modifier,
+    onItemClick: (String) -> Unit = {}
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = Color.White,
+        shadowElevation = 8.dp,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEach { item ->
+                BottomNavItemView(
+                    item = item,
+                    onClick = { onItemClick(item.label) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BottomNavItemView(
+    item: BottomNavItem,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    Column(
+        modifier = modifier
+            .clickable { onClick() }
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = item.label,
+            tint = if (item.isSelected) PrimaryBlue else TextGray,
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = item.label,
+            fontSize = 11.sp,
+            color = if (item.isSelected) PrimaryBlue else TextGray,
+            fontWeight = if (item.isSelected) FontWeight.SemiBold else FontWeight.Normal
+        )
+    }
+}

@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">LankaSmartMart</string>
+    <!-- Keys are now injected via build.gradle.kts from local.properties -->
+</resources>

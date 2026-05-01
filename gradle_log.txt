@@ -1,0 +1,45 @@
+﻿Configuration on demand is an incubating feature.
+./gradlew : 
+At line:1 char:1
++ ./gradlew 
+assembleDebug 2>&1 
+| Out-File 
+-FilePath 
+gradle_log.txt -Enc 
+...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (:Str   
+ ing) [], Remote    
+Exception
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+FAILURE: Build 
+failed with an 
+exception.
+
+* What went wrong:
+25.0.2
+
+* Try:
+> Run with 
+--stacktrace option 
+to get the stack 
+trace.
+> Run with --info 
+or --debug option 
+to get more log 
+output.
+> Run with --scan 
+to get full 
+insights.
+> Get more help at h
+ttps://help.gradle.o
+rg.
+
+BUILD FAILED in 
+962ms
