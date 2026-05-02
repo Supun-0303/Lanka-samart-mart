@@ -1,0 +1,45 @@
+# Gradle
+.gradle/
+/build/
+**/build/
+
+# Local configuration
+local.properties
+
+# Android Studio
+.idea/
+*.iml
+
+# Keystore files
+*.jks
+*.keystore
+
+# Generated files
+/captures/
+.externalNativeBuild/
+
+# Gradle caches
+.gradle
+
+# Kotlin
+**/*.kotlin_module
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# venv
+.venv/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Misc
+*.zip
+*.apk
+*.ap_
